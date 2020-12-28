@@ -1,86 +1,118 @@
 import os
-import time
-import logging
 import argparse
-
-# conda install -c conda-forge datatables
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-n", "--name", required=True, help="Enviroment name")
 args = vars(ap.parse_args())
-
-# Logger
-logging.basicConfig(filename='logs.log', level=logging.DEBUG)
-
-# Settings
-REQUIREMENTS_FILE = 'requirements.txt'
 ENV_NAME = format(args["name"])
-ACTIVATE = f'conda activate ./{ENV_NAME} && '
 
-# Commands
-# rebuilding jupyter
-rebuild = f'{ACTIVATE}jupyter lab build'
-rebuild_no_dev = f'{ACTIVATE}jupyter lab build --dev-build=False'
+# TODO :
+"""
+check MLFLOW
+follow Git extension status
+"""
 
-# jupyter lab basic dependencies
-ipywid = f'{ACTIVATE}conda install -c conda-forge ipywidgets -y'
-widget_manager = f'{ACTIVATE}jupyter labextension install @jupyter-widgets/jupyterlab-manager@2.0'
-nodejs_addon = f'{ACTIVATE}conda install -c conda-forge nodejs -y'
 
-# Installing git on jupyter
-git_setup = f'{ACTIVATE}pip3 install --upgrade jupyterlab jupyterlab-git'
+class Commands:
+    """
+    These are the commands that will be used to install everything.
+
+    ACTIVATE -> env pre-activation before commands
+
+    install_lab -> Jupyter Lab installation
+    ipywid -> basic dependency to install extensions
+    nodejs_addon -> basic dependency to install extensions
+    git_setup -> Git extension for JupyterLab - Currently not supported for version 3.0
+    rebuild -> Rebuild the app
+    rebuild_nd -> Sometimes the one above wont work, you may you this one
+
+    """
+
+    ACTIVATE = f'conda activate ./{ENV_NAME} && '
+    rebuild = 'jupyter lab build'
+    install_lab = 'conda install -c conda-forge jupyterlab -y'
+    rebuild_nd = f'jupyter lab build --dev-build=False'
+    ipywid = 'conda install -c conda-forge ipywidgets -y'
+    nodejs_addon = 'conda install -c conda-forge nodejs -y'
+    git_setup = 'conda install -c conda-forge jupyterlab jupyterlab-git -y'
+
+
+class Libs:
+    """
+    These are the basic libs that will be installed, you may add libs here safely.
+    NOTE: Not all libs can be found or installed via conda, some of them may require you to install via pip.
+    """
+    libs_to_install = [
+        'pandas',
+        'Shapely',
+        'geopandas',
+        'rtree',
+        'scipy',
+        'scikit-learn',
+        'matplotlib',
+        'graphviz',
+        'datatables',
+        # 'mlflow' - need to view how to fix.
+    ]
 
 
 def start_build():
-    logging.info('Starting build..')
-    try:
-        os.system(f'conda activate && conda create --prefix ./{ENV_NAME} --file requirements.txt -y')
-        logging.info('ENV created')
-    except Exception as e:
-        print('Something went wrong, check log files.')
-        logging.error(str(e))
+    os.system(f'conda activate && conda create --prefix ./{ENV_NAME} -y')
+
+
+def run_command(command):
+    print('\n' * 10, f'[Running] > {command}', '\n' * 3)
+    os.system(f'{Commands.ACTIVATE}{command}')
+
+
+def install_lib(lib_name):
+    print('\n' * 10, f'[Running] > {lib_name} installation', '\n' * 3)
+    os.system(f'{Commands.ACTIVATE}conda install -c conda-forge {lib_name} -y')
 
 
 def build_jupyter_base():
-    try:
-        print(
-            '\n-------------------------------------------\n\t\t\t'
-            'Upgrading Jupyter Lab'
-            '\n-------------------------------------------\n')
-        logging.info('Upgrading Jupyter Lab...')
-        os.system(nodejs_addon)
-        os.system(ipywid)
-        os.system(widget_manager)
-        os.system(rebuild)
-    except Exception as e:
-        print('Something went wrong, check log files.')
-        logging.error(f'BUILD BASE ERROR : {str(e)}')
+    """
+    Jupyter Lab Setup
+    1 - Install Jupyter Labs
+    2 - Install NodeJS addon for python (needed for Jupyter Lab Extensions)
+    3 - Install ipywidget (Basic dependency for Jupyter Lab Extensions)
+    4 - rebuild app (required to make it work properly)
+    """
+    run_command(Commands.install_lab)
+    run_command(Commands.nodejs_addon)
+    run_command(Commands.ipywid)
+    run_command(Commands.rebuild)
 
 
 def add_git_extension():
-    try:
-        print('\n---Installing Git---\n')
-        logging.info('Installing Git')
-        os.system(git_setup)
-        os.system(rebuild_no_dev)
-        os.system(rebuild)
-    except Exception as e:
-        print('Something went wrong, check log files.')
-        logging.error(f'ADD GIT ERROR : {str(e)}')
+    """
+    Git installation
+    1 - install git
+    2 - rebuild app (required to make it work)
+    """
+    run_command(Commands.git_setup)
+    run_command(Commands.rebuild_nd)
 
 
 if __name__ == '__main__':
-    if REQUIREMENTS_FILE in os.listdir():
-        print(f'{REQUIREMENTS_FILE} loaded successfully')
-        print('Searching for conda on your system...')
-        if 'conda' in os.popen('pip freeze').read():
-            print('conda found.')
-            start_build()
-            build_jupyter_base()
-            add_git_extension()
-            time.sleep(3)
-        else:
-            print('Could not find conda on your system, please install miniconda using the following link: \n'
-                  'https://docs.conda.io/en/latest/miniconda.html\n')
+    """
+    Main Installation process
+    HLD:
+        - verify the user has conda
+            if has :
+                - create ENV with the name the user picks
+                - building the base for jupyter labs
+                - add git extension [CURRENTLY NOT WORKING]
+                - install all of the base libraries
+            else:
+                sends the user a link for miniconda.
+    """
+    if 'conda' in os.popen('pip freeze').read():
+        start_build()
+        build_jupyter_base()
+        # add_git_extension()
+        for library in Libs.libs_to_install:
+            install_lib(library)
     else:
-        print(f'ERROR: {REQUIREMENTS_FILE} file was not found...')
+        print('Could not find conda on your system, please install miniconda using the following link: \n'
+              'https://docs.conda.io/en/latest/miniconda.html\n')
