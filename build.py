@@ -3,7 +3,7 @@ import time
 import logging
 import argparse
 
-#conda install -c conda-forge datatables
+# conda install -c conda-forge datatables
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-n", "--name", required=True, help="Enviroment name")
@@ -34,7 +34,7 @@ git_setup = f'{ACTIVATE}pip3 install --upgrade jupyterlab jupyterlab-git'
 def start_build():
     logging.info('Starting build..')
     try:
-        os.system(f'conda create --prefix ./{ENV_NAME} --file requirements.txt -y')
+        os.system(f'conda activate && conda create --prefix ./{ENV_NAME} --file requirements.txt -y')
         logging.info('ENV created')
     except Exception as e:
         print('Something went wrong, check log files.')
@@ -43,12 +43,15 @@ def start_build():
 
 def build_jupyter_base():
     try:
-        print('\n-------------------------------------------\n\t\t\tUpgrading Jupyter Lab\n-------------------------------------------\n')
+        print(
+            '\n-------------------------------------------\n\t\t\t'
+            'Upgrading Jupyter Lab'
+            '\n-------------------------------------------\n')
         logging.info('Upgrading Jupyter Lab...')
         os.system(nodejs_addon)
         os.system(ipywid)
         os.system(widget_manager)
-        # os.system(rebuild)
+        os.system(rebuild)
     except Exception as e:
         print('Something went wrong, check log files.')
         logging.error(f'BUILD BASE ERROR : {str(e)}')
